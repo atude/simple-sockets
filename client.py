@@ -1,11 +1,11 @@
-import socket
+import socket, sys
 from functions import *
 
-SERVER = "127.0.0.1"
-PORT = 8080
+SERVER_IP = sys.argv[1]
+SERVER_PORT = int(sys.argv[2])
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((SERVER, PORT))
+client.connect((SERVER_IP, SERVER_PORT))
 
 sentData = ""
 

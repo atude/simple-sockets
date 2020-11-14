@@ -1,10 +1,10 @@
-import socket, threading
+import socket, threading, sys
 from functions import *
 from consts import *
 
-# TODO: CLI
 LOCALHOST = "127.0.0.1"
-PORT = 8080
+SERVER_PORT = int(sys.argv[1])
+ADMIN_PW = sys.argv[2]
 
 currUsers = []
 currForumThreads = []
@@ -279,7 +279,7 @@ def forum(thread, username, preMsg=""):
 # Set up TCP sockets
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server.bind((LOCALHOST, PORT))
+server.bind((LOCALHOST, SERVER_PORT))
 
 print("Waiting for clients")
 
