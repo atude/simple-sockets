@@ -43,6 +43,7 @@ while True:
     recvFilesize = client.recv(1024)
     filesize = int(recvFilesize.decode())
     client.sendall(formatText(DWN_START_DOWNLOAD))
+    
     recvsize = 0
     buffer = None
     while recvsize < filesize:
@@ -53,6 +54,7 @@ while True:
         buffer = recvFile
       else:
         buffer += recvFile
+        
     f = open(filename, "wb")
     f.write(buffer)
     f.close()
@@ -61,7 +63,5 @@ while True:
     print(msg)
     sentData = input()
     client.sendall(formatText(sentData))
-
-    
 
 client.close()

@@ -19,7 +19,6 @@ class ThreadController(threading.Thread):
   def run(self):
     currUsername = auth(self)
     forum(self, currUsername, WELCOME)
-    print("Username exited")
 
 # Handles login and signup
 def auth(thread, retryMsg=""):
@@ -124,8 +123,11 @@ def commandController(thread, username, cmdCode, args):
     if lenArgs != 1:
       return forum(thread, username, INVALID_SYNTAX + cmdCode)
     return commandExit(thread, username)
-  # elif cmdCode == "SHT":
-
+  elif cmdCode == "SHT":
+    print(f"{username} issued SHT command")
+    if lenArgs != 2:
+      return forum(thread, username, INVALID_SYNTAX + cmdCode)
+    return commandShutdown(thread, username, splitArgs[1])
   else: 
     return forum(thread, username, INVALID_COMMAND)
   
@@ -192,9 +194,7 @@ def commandEditMessage(thread, username, forumThreadName, messageNum, message):
 def commandListThreads(thread, username):
   if len(currForumThreads) == 0:
     return forum(thread, username, "No threads to list")
-
   threadsStr = "The list of active threads: \n"
-
   for i in range(len(currForumThreads)):
     if i == len(currForumThreads) - 1:
       threadsStr += currForumThreads[i]
@@ -261,6 +261,12 @@ def commandExit(thread, username):
   currUsers.remove(username)
   sendData(thread, EXIT_CONNECTION)
   thread.threadSocket.close()
+  print(f"{username} exited")
+
+# SHT command
+def commandShutdown(thread, username, password):
+  if password != ADMIN_PW:
+    return forum(thread, username, INAVLID_ADMIN_PASSWORD)
 
 # Forum instance
 def forum(thread, username, preMsg=""):
@@ -272,9 +278,6 @@ def forum(thread, username, preMsg=""):
   except Exception as err:
     # TODO change this back at end
     return forum(thread, username, "Invalid command - something unexpected happened\n" + err)
-
-
-
 
 # Set up TCP sockets
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

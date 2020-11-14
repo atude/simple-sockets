@@ -14,6 +14,7 @@ ENTER_COMMANDS = "Enter one of the following commands: CRT, MSG, DLT, EDT, LST, 
 # Invalid/error states
 INVALID_COMMAND = "Invalid command"
 INVALID_PASSWORD = "Invalid password"
+INAVLID_ADMIN_PASSWORD = "Incorrect password"
 INVALID_SYNTAX = "Invalid syntax for "
 
 # Success
