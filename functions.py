@@ -64,6 +64,54 @@ def receiveFile(thread, username, threadName, filename):
   f.close()
   return SUCCESS
 
+# Send file to client
+def sendFile(thread, threadName, filename):
+  if not os.path.exists(threadName):
+    return ERROR_THREAD_NOT_EXIST
+  
+  foundUpload = False
+  f = open(threadName, "r")
+  for line in f.readlines():
+    words = line.strip().split(" ")
+    if len(words) == 3 and words[1] == "uploaded":
+      if words[2] == filename:
+        foundUpload = True
+
+  f.close()
+  if not foundUpload:
+    return ERROR_DOWNLOAD_FILE_NOT_FOUND
+
+  f = open(f"{threadName}-{filename}", "rb")
+  l = f.read()
+  f.close()
+
+  # Start sending to client
+  try:
+    # Confirm download to client
+    sendData(thread, DWN_CONFIRM_DOWNLOAD)
+    ack = thread.threadSocket.recv(2048)
+    ack = ack.decode()
+    if ack != DWN_READY_DOWNLOAD:
+      raise Exception("Did not receive confirmation from client")
+    sendData(thread, str(len(l)))
+    ack = thread.threadSocket.recv(2048)
+    ack = ack.decode()
+    if ack != DWN_START_DOWNLOAD:
+      raise Exception("Did not receive confirmation from client")
+    thread.threadSocket.sendall(l)
+    ack = receiveData(thread)
+    if ack != DWN_FINISHED_DOWNLOAD:
+      raise Exception("Did not receive confirmation from client")
+  except Exception as e:
+    print("Something unexpected happened\n" + e)
+    return ERROR_INTERNAL_ERROR
+
+  return SUCCESS
+
+  
+
+
+
 #
 #
 # Auth and preparation

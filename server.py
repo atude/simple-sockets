@@ -51,8 +51,7 @@ def auth(thread, retryMsg=""):
 
   # Bad password -> retry auth
   if users[inpUsername] != inpPassword:
-    auth(thread, INVALID_PASSWORD)
-    return
+    return auth(thread, INVALID_PASSWORD)
 
   if authAlreadyLoggedIn(thread, inpUsername):
     return auth(thread, f"{inpUsername} has already logged in")
@@ -110,8 +109,11 @@ def commandController(thread, username, cmdCode, args):
     if lenArgs != 3:
       return forum(thread, username, INVALID_SYNTAX + cmdCode)
     return commandUploadFile(thread, username, splitArgs[1], splitArgs[2])
-  # elif cmdCode == "DWN":
-
+  elif cmdCode == "DWN":
+    print(f"{username} issued DWN command")
+    if lenArgs != 3:
+      return forum(thread, username, INVALID_SYNTAX + cmdCode)
+    return commandDownloadFile(thread, username, splitArgs[1], splitArgs[2])
   elif cmdCode == "RMV":
     print(f"{username} issued RMV command")
     if lenArgs != 2:
@@ -223,6 +225,22 @@ def commandUploadFile(thread, username, forumThreadName, filename):
 
   print(f"{username} uploaded file {filename} to {forumThreadName} thread")
   return forum(thread, username, f"{filename} uploaded to {forumThreadName} thread")
+
+# DWN command
+def commandDownloadFile(thread, username, forumThreadName, filename):
+  res = sendFile(thread, forumThreadName, filename)
+  if res == ERROR_THREAD_NOT_EXIST:
+    print(f"Thread {forumThreadName} does not exist")
+    return forum(thread, username, f"Thread {forumThreadName} does not exist")
+  if res == ERROR_DOWNLOAD_FILE_NOT_FOUND:
+    print(f"{filename} does not exist in thread {forumThreadName}")
+    return forum(thread, username, f"File does not exist in thread {forumThreadName}")
+  if res == ERROR_INTERNAL_ERROR:
+    print("An unknown internal error occured")
+    return forum(thread, username, "An unknown internal error occured, please try again")
+
+  print(f"{filename} downloaded from thread {forumThreadName}")
+  return forum(thread, username, f"{filename} successfully downloaded")
 
 # RMV command
 def commandRemoveThread(thread, username, forumThreadName):
