@@ -16,6 +16,7 @@ shutdown = False
 class ThreadController(threading.Thread):
   # Initialise thread and assign socket to thread
   def __init__(self, addr, sock):
+    global currThreads
     threading.Thread.__init__(self)
     self.threadSocket = sock
     currThreads.append(self)
@@ -278,6 +279,7 @@ def commandExit(thread, username):
 # SHT command
 def commandShutdown(thread, username, password):
   global shutdown
+  global currThreads
   if password != ADMIN_PW:
     return forum(thread, username, INVALID_ADMIN_PASSWORD)
   # TODO: delete all files etc
@@ -286,7 +288,9 @@ def commandShutdown(thread, username, password):
     currThreads.remove(thisThread)
   print(SERVER_SHUTDOWN)
   shutdown = True
+  # Force quit all and threads
   server.close()
+  os._exit(1)
 
 # Forum instance - will return to itself at all cases unless shutdown or exited
 def forum(thread, username, preMsg=""):
