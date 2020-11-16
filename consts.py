@@ -14,7 +14,7 @@ ENTER_COMMANDS = "Enter one of the following commands: CRT, MSG, DLT, EDT, LST, 
 # Invalid/error states
 INVALID_COMMAND = "Invalid command"
 INVALID_PASSWORD = "Invalid password"
-INAVLID_ADMIN_PASSWORD = "Incorrect password"
+INVALID_ADMIN_PASSWORD = "Incorrect password"
 INVALID_SYNTAX = "Invalid syntax for "
 
 # Success
@@ -32,6 +32,8 @@ ERROR_DOWNLOAD_FILE_NOT_FOUND = "ERROR_DOWNLOAD_FILE_NOT_FOUND"
 ERROR_INTERNAL_ERROR = "ERROR_INTERNAL_ERROR"
 
 # Connection states
-CLIENT_CONNECTED = "Client connected"
 WELCOME = "Welcome to the forum"
-EXIT_CONNECTION = "Goodbye"
+CLIENT_CONNECTED = "Client connected"
+CLIENT_SHUTDOWN = "Goodbye. Server shutting down"
+CLIENT_EXIT = "Goodbye"
+SERVER_SHUTDOWN = "Server shutting down"

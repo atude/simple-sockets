@@ -20,19 +20,23 @@ def sendData(thread, msg):
 
 # Receive data (i.e. commands) from client
 def receiveData(thread):
-  data = ''
-  while True: 
-    data = thread.threadSocket.recv(2048)
-    data = data.decode()
-    data = data.strip()
-    if data:
-      break
-  return data
+  try:
+    data = ''
+    while True: 
+      data = thread.threadSocket.recv(2048)
+      data = data.decode()
+      data = data.strip()
+      if data:
+        break
+    return data
+  except:
+    # Socket unexpectedly closed -> kill thread
+    exit()
 
 # Receive file from client
 # First get file size, then file
-def receiveFile(thread, username, threadName, filename):
-  if not os.path.exists(threadName):
+def receiveFile(thread, username, threadName, filename, currThreads):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
 
   buffer = None
@@ -65,8 +69,8 @@ def receiveFile(thread, username, threadName, filename):
   return SUCCESS
 
 # Send file to client
-def sendFile(thread, threadName, filename):
-  if not os.path.exists(threadName):
+def sendFile(thread, threadName, filename, currThreads):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
   
   foundUpload = False
@@ -108,10 +112,6 @@ def sendFile(thread, threadName, filename):
 
   return SUCCESS
 
-  
-
-
-
 #
 #
 # Auth and preparation
@@ -121,11 +121,12 @@ def sendFile(thread, threadName, filename):
 def loadUsers():
   f = open("credentials.txt", "r")
   lines = f.readlines()
+  f.close()
   users = {}
   for line in lines:
-    username, password = line.rstrip().split(' ')
-    users[username] = password
-  f.close()
+    if len(line.strip()) > 0:
+      username, password = line.rstrip().split(' ')
+      users[username] = password
   return users
 
 def createUser(username, password):
@@ -148,17 +149,17 @@ def createUser(username, password):
 #
 
 # CRT helper
-def createThread(threadName, username):
-  if os.path.exists(threadName):
+def createThread(threadName, username, currThreads):
+  if threadName in currThreads:
     return ERROR_THREAD_ALREADY_EXISTS
-  f = open(threadName, "a")
+  f = open(threadName, "w")
   f.write(f"{username}\n")
   f.close()
   return SUCCESS
 
 # MSG helper
-def createMessage(threadName, message, username):
-  if not os.path.exists(threadName):
+def createMessage(threadName, message, username, currThreads):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
   f = open(threadName, "r")
   lines = f.readlines()
@@ -183,7 +184,7 @@ def createMessage(threadName, message, username):
 
 # RDT helper
 def readThread(threadName, currThreads):
-  if not os.path.exists(threadName):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
   if threadName not in currThreads:
     return ERROR_THREAD_NOT_EXIST
@@ -202,7 +203,7 @@ def readThread(threadName, currThreads):
 
 # RMV helper
 def removeThread(username, threadName, currThreads):
-  if not os.path.exists(threadName):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
   if threadName not in currThreads:
     return ERROR_THREAD_NOT_EXIST
@@ -216,8 +217,8 @@ def removeThread(username, threadName, currThreads):
   return SUCCESS
 
 # DLT helper
-def deleteMessage(threadName, username, messageNum):
-  if not os.path.exists(threadName):
+def deleteMessage(threadName, username, messageNum, currThreads):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
 
   # Parse inp message number
@@ -278,8 +279,8 @@ def deleteMessage(threadName, username, messageNum):
   f.close()
   return
 
-def editMessage(threadName, username, messageNum, message):
-  if not os.path.exists(threadName):
+def editMessage(threadName, username, messageNum, message, currThreads):
+  if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST
 
   # Parse inp message number

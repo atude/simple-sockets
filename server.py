@@ -8,17 +8,27 @@ ADMIN_PW = sys.argv[2]
 
 currUsers = []
 currForumThreads = []
+currThreads = []
+
+shutdown = False
 
 # Split up threads for each client
 class ThreadController(threading.Thread):
+  # Initialise thread and assign socket to thread
   def __init__(self, addr, sock):
     threading.Thread.__init__(self)
     self.threadSocket = sock
+    currThreads.append(self)
     print(CLIENT_CONNECTED)
 
+  # Run thread unless global shutdown called
   def run(self):
-    currUsername = auth(self)
-    forum(self, currUsername, WELCOME)
+    global shutdown
+    while not shutdown:
+      currUsername = auth(self)
+      forum(self, currUsername, WELCOME)
+      break
+    return
 
 # Handles login and signup
 def auth(thread, retryMsg=""):
@@ -57,7 +67,6 @@ def auth(thread, retryMsg=""):
 
   return authSuccessful(inpUsername)
 
-
 def authAlreadyLoggedIn(thread, username):
   if username in currUsers:
     print(f"{username} has already logged in")
@@ -69,6 +78,7 @@ def authSuccessful(username):
   print(f"{username} successful login")
   return username
 
+# Main controller for validating commands and distributing commands to functions
 def commandController(thread, username, cmdCode, args):
   splitArgs = args.split(" ")
   lenArgs = len(splitArgs)
@@ -133,7 +143,7 @@ def commandController(thread, username, cmdCode, args):
   
 # CRT command
 def commandCreateThread(thread, username, forumThreadName):
-  res = createThread(forumThreadName, username)
+  res = createThread(forumThreadName, username, currForumThreads)
   if res == ERROR_THREAD_ALREADY_EXISTS:
     print(f"Thread {forumThreadName} exists")
     return forum(thread, username, f"Thread {forumThreadName} exists")
@@ -144,7 +154,7 @@ def commandCreateThread(thread, username, forumThreadName):
 
 # MSG command
 def commandCreateMessage(thread, username, forumThreadName, message):
-  res = createMessage(forumThreadName, message, username)
+  res = createMessage(forumThreadName, message, username, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
@@ -154,7 +164,7 @@ def commandCreateMessage(thread, username, forumThreadName, message):
 
 # DLT command
 def commandDeleteMessage(thread, username, forumThreadName, messageNum):
-  res = deleteMessage(forumThreadName, username, messageNum)
+  res = deleteMessage(forumThreadName, username, messageNum, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
@@ -173,7 +183,7 @@ def commandDeleteMessage(thread, username, forumThreadName, messageNum):
 
 # EDT command
 def commandEditMessage(thread, username, forumThreadName, messageNum, message):
-  res = editMessage(forumThreadName, username, messageNum, message)
+  res = editMessage(forumThreadName, username, messageNum, message, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
@@ -218,7 +228,7 @@ def commandReadThread(thread, username, forumThreadName):
 
 # UPD command
 def commandUploadFile(thread, username, forumThreadName, filename):
-  res = receiveFile(thread, username, forumThreadName, filename)
+  res = receiveFile(thread, username, forumThreadName, filename, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
@@ -228,7 +238,7 @@ def commandUploadFile(thread, username, forumThreadName, filename):
 
 # DWN command
 def commandDownloadFile(thread, username, forumThreadName, filename):
-  res = sendFile(thread, forumThreadName, filename)
+  res = sendFile(thread, forumThreadName, filename, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
@@ -259,16 +269,26 @@ def commandRemoveThread(thread, username, forumThreadName):
 # XIT command
 def commandExit(thread, username):
   currUsers.remove(username)
-  sendData(thread, EXIT_CONNECTION)
+  sendData(thread, CLIENT_EXIT)
   thread.threadSocket.close()
   print(f"{username} exited")
+  if len(currUsers) == 0:
+    print("Waiting for clients")
 
 # SHT command
 def commandShutdown(thread, username, password):
+  global shutdown
   if password != ADMIN_PW:
-    return forum(thread, username, INAVLID_ADMIN_PASSWORD)
+    return forum(thread, username, INVALID_ADMIN_PASSWORD)
+  # TODO: delete all files etc
+  for thisThread in currThreads:
+    thisThread.threadSocket.close()
+    currThreads.remove(thisThread)
+  print(SERVER_SHUTDOWN)
+  shutdown = True
+  server.close()
 
-# Forum instance
+# Forum instance - will return to itself at all cases unless shutdown or exited
 def forum(thread, username, preMsg=""):
   sendData(thread, preMsg + "\n" + ENTER_COMMANDS)
   inpArgs = receiveData(thread)
@@ -276,19 +296,26 @@ def forum(thread, username, preMsg=""):
     cmdCode = inpArgs.split(" ", 1)[0]
     return commandController(thread, username, cmdCode, inpArgs)
   except Exception as err:
-    # TODO change this back at end
+    # Unhandled error in command logic
     return forum(thread, username, "Invalid command - something unexpected happened\n" + err)
 
-# Set up TCP sockets
+# Set up server and TCP sockets for listening
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind((LOCALHOST, SERVER_PORT))
+server.listen(1)
 
 print("Waiting for clients")
 
-# Server listener
+# Accept sockets and distribute to threads while alive
 while True:
-  server.listen(1)
-  getSocket, getAddr = server.accept()
-  threadInstance = ThreadController(getAddr, getSocket)
-  threadInstance.start()
+  try:
+    getSocket, getAddr = server.accept()
+    threadInstance = ThreadController(getAddr, getSocket)
+    threadInstance.start()
+  except:
+    # Failed to accept new connections, i.e. server has closed
+    # SHT case
+    break
+
+server.close()
