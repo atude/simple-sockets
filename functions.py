@@ -1,5 +1,5 @@
+import os, glob
 from time import sleep
-import os
 from consts import *
 
 #
@@ -66,7 +66,7 @@ def receiveFile(thread, username, threadName, filename, currThreads):
   f = open(threadName, "a")
   f.write(f"{username} uploaded {filename}\n")
   f.close()
-  return SUCCESS
+  return f"{threadName}-{filename}"
 
 # Send file to client
 def sendFile(thread, threadName, filename, currThreads):
@@ -211,8 +211,20 @@ def removeThread(username, threadName, currThreads):
   threadCreator = f.readlines()[0].strip()
   if threadCreator != username:
     return ERROR_THREAD_DELETE_NO_PERMS
-  
   f.close()
+
+  threadFiles = []
+  f = open(threadName, "r")
+  for line in f.readlines():
+    words = line.strip().split(" ")
+    if len(words) == 3 and words[1] == "uploaded":
+      threadFiles.append(f"{threadName}-{words[2]}")
+
+  # Delete thread files
+  for file in threadFiles:
+    if os.path.exists(file):
+      os.remove(file)
+  
   os.remove(threadName)
   return SUCCESS
 
@@ -279,6 +291,7 @@ def deleteMessage(threadName, username, messageNum, currThreads):
   f.close()
   return
 
+# EDT helper
 def editMessage(threadName, username, messageNum, message, currThreads):
   if not os.path.exists(threadName) or not threadName in currThreads:
     return ERROR_THREAD_NOT_EXIST

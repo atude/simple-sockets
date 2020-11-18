@@ -1,4 +1,4 @@
-import socket, threading, sys
+import socket, threading, sys, os, glob
 from functions import *
 from consts import *
 
@@ -9,6 +9,7 @@ ADMIN_PW = sys.argv[2]
 currUsers = []
 currForumThreads = []
 currThreads = []
+uploadedFiles = []
 
 shutdown = False
 
@@ -229,11 +230,13 @@ def commandReadThread(thread, username, forumThreadName):
 
 # UPD command
 def commandUploadFile(thread, username, forumThreadName, filename):
+  global uploadedFiles
   res = receiveFile(thread, username, forumThreadName, filename, currForumThreads)
   if res == ERROR_THREAD_NOT_EXIST:
     print(f"Thread {forumThreadName} does not exist")
     return forum(thread, username, f"Thread {forumThreadName} does not exist")
 
+  uploadedFiles.append(res)
   print(f"{username} uploaded file {filename} to {forumThreadName} thread")
   return forum(thread, username, f"{filename} uploaded to {forumThreadName} thread")
 
@@ -280,9 +283,22 @@ def commandExit(thread, username):
 def commandShutdown(thread, username, password):
   global shutdown
   global currThreads
+  global uploadedFiles
   if password != ADMIN_PW:
     return forum(thread, username, INVALID_ADMIN_PASSWORD)
   # TODO: delete all files etc
+  # Delete relevant files
+  try:
+    os.remove('credentials.txt')
+    for forumThread in currForumThreads:
+      if os.path.exists(forumThread):
+        os.remove(forumThread)
+    for file in uploadedFiles:
+      if os.path.exists(file):
+        os.remove(file)
+  except:
+    pass
+  # Kill threads
   for thisThread in currThreads:
     thisThread.threadSocket.close()
     currThreads.remove(thisThread)
